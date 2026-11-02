@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>排水設備工事責任技術者 対策アプリ</title>
+    <style>
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f0f2f5; color: #212529; margin: 0; padding: 12px; line-height: 1.5; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 16px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        h1 { font-size: 1.15rem; text-align: center; border-bottom: 2px solid #007bff; margin: 0 0 16px 0; padding-bottom: 10px; color: #007bff; font-weight: 700; }
+        
+        .mode-select { display: flex; gap: 6px; margin-bottom: 12px; }
+        .btn-tab { flex: 3; padding: 12px; border: none; background: #e4e6eb; color: #4b4f56; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9rem; }
+        .btn-tab.active { background: #007bff; color: white; }
+        .btn-reset { flex: 1; padding: 12px; border: 1px solid #dc3545; background: #fff; color: #dc3545; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.85rem; }
+        .btn-reset:active { background: #f8d7da; }
+        
+        /* 【追加】問題移動エリアのスタイル */
+        .jump-zone { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 16px; padding: 10px; background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; }
+        .jump-label { font-size: 0.85rem; font-weight: bold; color: #495057; }
+        .jump-select { flex: 1; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.9rem; background-color: #fff; height: 38px; cursor: pointer; }
+        
+        .counter { font-size: 0.8rem; color: #65676b; font-weight: bold; text-align: right; margin-bottom: 8px; }
+        .question-text { font-size: 0.95rem; line-height: 1.6; margin-bottom: 16px; white-space: pre-wrap; background: #f7f8fa; padding: 14px; border-radius: 8px; border-left: 5px solid #007bff; font-weight: 500; }
+        .quiz-image-container { text-align: center; margin-bottom: 16px; background: #f0f2f5; padding: 8px; border-radius: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .quiz-image { max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; max-height: 280px; object-fit: contain; }
+        .image-hint { font-size: 0.75rem; color: #8a8d91; margin-top: 4px; display: block; }
+        .input-block { margin-bottom: 12px; padding: 12px; background: #ffffff; border: 1px solid #ced4da; border-radius: 8px; }
+        .input-block label { display: block; font-weight: bold; margin-bottom: 6px; color: #495057; font-size: 0.85rem; }
+        .blank-select { display: block; width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.95rem; height: 48px; background-color: #ffffff; }
+        .result-btn { width: 100%; padding: 14px; background: #28a745; color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 12px; }
+        .feedback { margin-top: 16px; padding: 16px; border-radius: 8px; display: none; }
+        .feedback.correct { display: block; background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .feedback.incorrect { display: block; background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .explanation { margin-top: 12px; font-size: 0.9rem; color: #333; border-top: 1px solid rgba(0,0,0,0.1); padding-top: 12px; }
+        .nav-btns { display: flex; gap: 10px; margin-top: 16px; display: none; }
+        .btn-nav { flex: 1; padding: 14px; border: none; color: white; border-radius: 8px; font-size: 0.95rem; font-weight: bold; cursor: pointer; text-align: center; }
+        .btn-prev { background: #6c757d; }
+        .btn-next { background: #007bff; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>排水設備工事責任技術者 対策</h1>
+    
+    <div class="mode-select">
+        <button class="btn-tab active" id="btn-all" onclick="switchMode('all')">全問題</button>
+        <button class="btn-tab" id="btn-review" onclick="switchMode('review')">復習 (<span id="review-count">0</span>)</button>
+        <button class="btn-reset" onclick="resetReview()">クリア</button>
+    </div>
+
+    <!-- 【追加】問題番号に直接移動できるジャンプメニュー -->
+    <div class="jump-zone">
+        <span class="jump-label">問題移動:</span>
+        <select class="jump-select" id="jump-dropdown" onchange="jumpToQuestion(this.value)">
+            <!-- JavaScriptで自動生成されます -->
+        </select>
+    </div>
+
+    <div id="quiz-area">
+        <div class="counter" id="counter-display">問題 1 / 0</div>
+        <div class="question-text" id="q-text"></div>
+        <div class="quiz-image-container" id="image-area">
+            <img src="" alt="問題用図面" class="quiz-image" id="quiz-img">
+            <span class="image-hint">※図面は左右スクロールやピンチアウトで拡大できます</span>
+        </div>
+        <div id="inputs-container"></div>
+        <button class="result-btn" id="submit-btn" onclick="checkAnswers()">答え合わせをする</button>
+        <div class="feedback" id="feedback-box">
+            <div id="feedback-text"></div>
+            <div class="explanation" id="explanation-text"></div>
+        </div>
+        <div class="nav-btns" id="nav-area">
+            <button class="btn-nav btn-prev" onclick="prevQuestion()">前の問題へ</button>
+            <button class="btn-nav btn-next" onclick="nextQuestion()">次の問題へ</button>
+        </div>
+    </div>
+</div>
+<!-- 外部の問題データファイルを読み込む -->
+<script src="data.js"></script>
+
+<script>
+let currentMode = 'all';
+let activeQuestions = [];
+let currentIndex = 0;
+const STORAGE_KEY = 'sekinin_review_v3';
+
+function initApp() {
+    updateReviewCount();
+    switchMode('all');
+}
+
+function getReviewList() {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+}
+
+function updateReviewCount() {
+    document.getElementById('review-count').innerText = getReviewList().length;
+}
+
+function switchMode(mode) {
+    currentMode = mode;
+    const reviewList = getReviewList();
+    if (mode === 'review') {
+        document.getElementById('btn-review').classList.add('active');
+        document.getElementById('btn-all').classList.remove('active');
+        activeQuestions = quizData.filter(q => reviewList.includes(q.id));
+    } else {
+        document.getElementById('btn-all').classList.add('active');
+        document.getElementById('btn-review').classList.remove('active');
+        activeQuestions = [...quizData];
+    }
+    
+    // 【追加】ドロップダウンメニューの選択肢を現在のモードに合わせて更新
+    updateDropdownOptions();
+
+    if (activeQuestions.length === 0) {
+        document.getElementById('quiz-area').innerHTML = "<p style='text-align:center; padding:32px 10px; color:#65676b;'>復習する問題はありません！🎉</p>";
+        return;
+    }
+    currentIndex = 0;
+    showQuestion();
+}
+
+// 【追加】ドロップダウンの選択肢を動的に作る関数
+function updateDropdownOptions() {
+    const dropdown = document.getElementById('jump-dropdown');
+    dropdown.innerHTML = '';
+    
+    if (activeQuestions.length === 0) {
+        const opt = document.createElement('option');
+        opt.text = "問題なし";
+        dropdown.appendChild(opt);
+        return;
+    }
+
+    activeQuestions.forEach((q, index) => {
+        const opt = document.createElement('option');
+        opt.value = index;
+        // 「問題1（問1）」のような分かりやすい表記にする
+        const shortTitle = q.title.split('：')[0] || `問題${index + 1}`;
+        opt.text = `${index + 1}：${shortTitle}`;
+        dropdown.appendChild(opt);
+    });
+}
+
+// 【追加】ドロップダウンで番号が選ばれたときにジャンプする関数
+function jumpToQuestion(index) {
+    currentIndex = parseInt(index, 10);
+    showQuestion();
+}
+
+function resetReview() {
+    if (confirm('これまでに間違えた問題の記録（復習リスト）をすべて消去して、最初からやり連しますか？')) {
+        localStorage.removeItem(STORAGE_KEY);
+        updateReviewCount();
+        switchMode('all');
+        alert('復習リストをすべてリセットしました！');
+    }
+}
+
+function showQuestion() {
+    if (!document.getElementById('q-text')) {
+        location.reload();
+        return;
+    }
+
+    const q = activeQuestions[currentIndex];
+    
+    // カウンター表示の更新
+    document.getElementById('counter-display').innerText = `問題 ${currentIndex + 1} / ${activeQuestions.length}`;
+    
+    // 【追加】現在の問題番号に合わせてドロップダウンの選択状態も同期させる
+    document.getElementById('jump-dropdown').value = currentIndex;
+    
+    let fullText = `${q.title}\n\n${q.text}`;
+    
+    if (q.type === 'ox_list' && q.choices) {
+        fullText += "\n\n【記述文】\n";
+        q.choices.forEach(choice => {
+            fullText += `${choice}\n\n`;
+        });
+    }
+    
+    document.getElementById('q-text').innerText = fullText.trim();
+    
+    const imgArea = document.getElementById('image-area');
+    const imgTag = document.getElementById('quiz-img');
+    if (q.image) {
+        imgTag.src = q.image;
+        imgArea.style.display = 'block';
+    } else {
+        imgArea.style.display = 'none';
+        imgTag.src = '';
+    }
+    
+    document.getElementById('feedback-box').style.display = 'none';
+    document.getElementById('nav-area').style.display = 'none';
+    document.getElementById('submit-btn').style.display = 'block';
+
+    const container = document.getElementById('inputs-container');
+    container.innerHTML = '';
+
+    if (q.type === 'fill') {
+        Object.keys(q.answers).forEach(label => {
+            createSelectBlock(container, `【${label}】に入る語句・数値`, `select-${label}`, q.choices);
+        });
+    } else if (q.type === 'select_one') {
+        createSelectBlock(container, "もっとも誤っている番号", "select-正解", q.choices);
+    } else if (q.type === 'ox_list') {
+        Object.keys(q.answers).forEach(label => {
+            createSelectBlock(container, `${label} の記述判定`, `select-${label}`, ["〇", "×"]);
+        });
+    }
+    
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function createSelectBlock(parent, labelText, id, choices) {
+    const block = document.createElement('div');
+    block.className = 'input-block';
+    const label = document.createElement('label');
+    label.innerText = labelText;
+    block.appendChild(label);
+    const select = document.createElement('select');
+    select.className = 'blank-select';
+    select.id = id;
+    const defOpt = document.createElement('option');
+    defOpt.text = "タップして選択してください";
+    defOpt.value = "";
+    select.appendChild(defOpt);
+    choices.forEach(c => {
+        const opt = document.createElement('option');
+        opt.text = c;
+        opt.value = c;
+        select.appendChild(opt);
+    });
+    block.appendChild(select);
+    parent.appendChild(block);
+}
+
+function checkAnswers() {
+    const q = activeQuestions[currentIndex];
+    let allCorrect = true;
+    let userAnsHTML = '';
+    let correctAnsHTML = '';
+
+    Object.keys(q.answers).forEach(key => {
+        const userVal = document.getElementById(`select-${key}`).value;
+        const correctVal = q.answers[key];
+        userAnsHTML += `<li><strong>${key}</strong>: ${userVal || '未選択'}</li>`;
+        correctAnsHTML += `<li><strong>${key}</strong>: ${correctVal}</li>`;
+        if (userVal !== correctVal) allCorrect = false;
+    });
+
+    const box = document.getElementById('feedback-box');
+    let reviewList = getReviewList();
+
+    if (allCorrect) {
+        box.className = 'feedback correct';
+        document.getElementById('feedback-text').innerHTML = '<strong>⭕ 全問正解です！</strong>';
+        reviewList = reviewList.filter(id => id !== q.id);
+    } else {
+        box.className = 'feedback incorrect';
+        document.getElementById('feedback-text').innerHTML = '<strong>❌ 不正解が含まれています</strong>';
+        if (!reviewList.includes(q.id)) reviewList.push(q.id);
+    }
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(reviewList));
+    updateReviewCount();
+    document.getElementById('explanation-text').innerHTML = `<div><strong>【あなたの回答】</strong><ul>${userAnsHTML}</ul></div><div style="margin-top:8px;"><strong>【正しい解答】</strong><ul>${correctAnsHTML}</ul></div>`;
+    document.getElementById('submit-btn').style.display = 'none';
+    document.getElementById('nav-area').style.display = 'flex';
+    
+    box.style.display = 'block';
+    box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function nextQuestion() {
+    if (currentIndex < activeQuestions.length - 1) {
+        currentIndex++;
+        showQuestion();
+    } else {
+        alert('これが最後の問題です！');
+    }
+}
+
+function prevQuestion() {
+    if (currentIndex > 0) {
+        currentIndex--;
+        showQuestion();
+    }
+}
+
+window.onload = initApp;
+</script>
+</body>
+</html>
