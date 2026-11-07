@@ -16,13 +16,20 @@
         .btn-reset { flex: 1; padding: 12px; border: 1px solid #dc3545; background: #fff; color: #dc3545; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.85rem; }
         .btn-reset:active { background: #f8d7da; }
         
-        /* 【追加】問題移動エリアのスタイル */
         .jump-zone { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 16px; padding: 10px; background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; }
         .jump-label { font-size: 0.85rem; font-weight: bold; color: #495057; }
         .jump-select { flex: 1; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.9rem; background-color: #fff; height: 38px; cursor: pointer; }
         
         .counter { font-size: 0.8rem; color: #65676b; font-weight: bold; text-align: right; margin-bottom: 8px; }
-        .question-text { font-size: 0.95rem; line-height: 1.6; margin-bottom: 16px; white-space: pre-wrap; background: #f7f8fa; padding: 14px; border-radius: 8px; border-left: 5px solid #007bff; font-weight: 500; }
+        .question-text { font-size: 0.95rem; line-height: 1.6; margin-bottom: 12px; white-space: pre-wrap; background: #f7f8fa; padding: 14px; border-radius: 8px; border-left: 5px solid #007bff; font-weight: 500; }
+
+        /* ★ 追加: テーブル表示用のスタイル */
+        .quiz-table-container { overflow-x: auto; margin-bottom: 16px; -webkit-overflow-scrolling: touch; }
+        .quiz-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; background: #fff; }
+        .quiz-table th, .quiz-table td { border: 1px solid #dee2e6; padding: 8px 10px; text-align: center; }
+        .quiz-table th { background-color: #e9ecef; color: #495057; font-weight: bold; }
+        .quiz-table tr:nth-child(even) { background-color: #f8f9fa; }
+
         .quiz-image-container { text-align: center; margin-bottom: 16px; background: #f0f2f5; padding: 8px; border-radius: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
         .quiz-image { max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; max-height: 280px; object-fit: contain; }
         .image-hint { font-size: 0.75rem; color: #8a8d91; margin-top: 4px; display: block; }
@@ -50,17 +57,21 @@
         <button class="btn-reset" onclick="resetReview()">クリア</button>
     </div>
 
-    <!-- 【追加】問題番号に直接移動できるジャンプメニュー -->
     <div class="jump-zone">
         <span class="jump-label">問題移動:</span>
         <select class="jump-select" id="jump-dropdown" onchange="jumpToQuestion(this.value)">
-            <!-- JavaScriptで自動生成されます -->
         </select>
     </div>
 
     <div id="quiz-area">
         <div class="counter" id="counter-display">問題 1 / 0</div>
         <div class="question-text" id="q-text"></div>
+        
+        <!-- ★ 追加: 表（テーブル）表示領域 -->
+        <div class="quiz-table-container" id="table-area" style="display: none;">
+            <table class="quiz-table" id="quiz-table"></table>
+        </div>
+
         <div class="quiz-image-container" id="image-area">
             <img src="" alt="問題用図面" class="quiz-image" id="quiz-img">
             <span class="image-hint">※図面は左右スクロールやピンチアウトで拡大できます</span>
@@ -77,9 +88,8 @@
         </div>
     </div>
 </div>
-<!-- 外部の問題データファイルを読み込む -->
-<script src="data.js"></script>
 
+<script src="data.js"></script>
 <script>
 let currentMode = 'all';
 let activeQuestions = [];
@@ -112,7 +122,6 @@ function switchMode(mode) {
         activeQuestions = [...quizData];
     }
     
-    // 【追加】ドロップダウンメニューの選択肢を現在のモードに合わせて更新
     updateDropdownOptions();
 
     if (activeQuestions.length === 0) {
@@ -123,7 +132,6 @@ function switchMode(mode) {
     showQuestion();
 }
 
-// 【追加】ドロップダウンの選択肢を動的に作る関数
 function updateDropdownOptions() {
     const dropdown = document.getElementById('jump-dropdown');
     dropdown.innerHTML = '';
@@ -138,21 +146,19 @@ function updateDropdownOptions() {
     activeQuestions.forEach((q, index) => {
         const opt = document.createElement('option');
         opt.value = index;
-        // 「問題1（問1）」のような分かりやすい表記にする
         const shortTitle = q.title.split('：')[0] || `問題${index + 1}`;
         opt.text = `${index + 1}：${shortTitle}`;
         dropdown.appendChild(opt);
     });
 }
 
-// 【追加】ドロップダウンで番号が選ばれたときにジャンプする関数
 function jumpToQuestion(index) {
     currentIndex = parseInt(index, 10);
     showQuestion();
 }
 
 function resetReview() {
-    if (confirm('これまでに間違えた問題の記録（復習リスト）をすべて消去して、最初からやり連しますか？')) {
+    if (confirm('これまでに間違えた問題の記録（復習リスト）をすべて消去して、最初からやり直しますか？')) {
         localStorage.removeItem(STORAGE_KEY);
         updateReviewCount();
         switchMode('all');
@@ -168,10 +174,7 @@ function showQuestion() {
 
     const q = activeQuestions[currentIndex];
     
-    // カウンター表示の更新
     document.getElementById('counter-display').innerText = `問題 ${currentIndex + 1} / ${activeQuestions.length}`;
-    
-    // 【追加】現在の問題番号に合わせてドロップダウンの選択状態も同期させる
     document.getElementById('jump-dropdown').value = currentIndex;
     
     let fullText = `${q.title}\n\n${q.text}`;
@@ -185,6 +188,57 @@ function showQuestion() {
     
     document.getElementById('q-text').innerText = fullText.trim();
     
+    // ★ 追加: テーブル描画処理
+    const tableArea = document.getElementById('table-area');
+    const tableEl = document.getElementById('quiz-table');
+    if (q.tableData) {
+        if (q.id === 'q18') {
+            // 問題18専用：画像と同じセル結合（rowspan）を再現
+            let html = `<thead><tr>
+                <th colspan="2">下水道法上の種類</th>
+                <th>発生形態による分類</th>
+                <th>下水の種類</th>
+            </tr></thead><tbody>
+                <tr>
+                    <td rowspan="5" style="vertical-align: middle;">下水</td>
+                    <td rowspan="4" style="vertical-align: middle;">（ ア ）</td>
+                    <td rowspan="4" style="vertical-align: middle;">生活若しくは事業に起因</td>
+                    <td>屎尿を含んだ排水</td>
+                </tr>
+                <tr><td>（ ウ ）</td></tr>
+                <tr><td>工 場・（ エ ）</td></tr>
+                <tr><td>湧 水</td></tr>
+                <tr>
+                    <td>（ イ ）</td>
+                    <td>自然現象に起因</td>
+                    <td>（ オ ）</td>
+                </tr>
+            </tbody>`;
+            tableEl.innerHTML = html;
+            tableArea.style.display = 'block';
+        } else {
+            // その他の問題用の通常のテーブル描画
+            let html = '<thead><tr>';
+            q.tableData.headers.forEach(h => {
+                html += `<th>${h}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+            q.tableData.rows.forEach(row => {
+                html += '<tr>';
+                row.forEach(cell => {
+                    html += `<td>${cell}</td>`;
+                });
+                html += '</tr>';
+            });
+            html += '</tbody>';
+            tableEl.innerHTML = html;
+            tableArea.style.display = 'block';
+        }
+    } else {
+        tableArea.style.display = 'none';
+        tableEl.innerHTML = '';
+    }
+
     const imgArea = document.getElementById('image-area');
     const imgTag = document.getElementById('quiz-img');
     if (q.image) {
@@ -205,6 +259,25 @@ function showQuestion() {
     if (q.type === 'fill') {
         Object.keys(q.answers).forEach(label => {
             createSelectBlock(container, `【${label}】に入る語句・数値`, `select-${label}`, q.choices);
+        });
+    } else if (q.type === 'multi_fill') {
+        const customLabels = {
+            "q73": {
+                "ア": "（1）No.2 マンホールの深さ（ア）",
+                "イ": "（2）No.1～No.2間 管路勾配（イ）",
+                "ウ": "（3）No.1 管の土かぶり（ウ）",
+                "エ": "（4）No.2下流側 管の土かぶり（エ）",
+                "オ": "（5）No.3上流側 管底高（オ）"
+            }
+        };
+        Object.keys(q.answers).forEach(key => {
+            const labelText = (customLabels[q.id] && customLabels[q.id][key]) 
+                ? customLabels[q.id][key] + " にあてはまる数値" 
+                : `【${key}】に入る数値`;
+            
+            // 記号ごとの選択肢配列を渡す
+            const itemChoices = q.choicesMap[key] || [];
+            createSelectBlock(container, labelText, `select-${key}`, itemChoices);
         });
     } else if (q.type === 'select_one') {
         createSelectBlock(container, "もっとも誤っている番号", "select-正解", q.choices);
@@ -246,13 +319,42 @@ function checkAnswers() {
     let userAnsHTML = '';
     let correctAnsHTML = '';
 
-    Object.keys(q.answers).forEach(key => {
-        const userVal = document.getElementById(`select-${key}`).value;
-        const correctVal = q.answers[key];
-        userAnsHTML += `<li><strong>${key}</strong>: ${userVal || '未選択'}</li>`;
-        correctAnsHTML += `<li><strong>${key}</strong>: ${correctVal}</li>`;
-        if (userVal !== correctVal) allCorrect = false;
-    });
+    // ★ 問題17の場合：ウとエの順序が逆でも正解にする
+    if (q.id === 'q17') {
+        const userA = document.getElementById('select-ア').value;
+        const userI = document.getElementById('select-イ').value;
+        const userU = document.getElementById('select-ウ').value;
+        const userE = document.getElementById('select-エ').value;
+
+        userAnsHTML += `<li><strong>ア</strong>: ${userA || '未選択'}</li>`;
+        userAnsHTML += `<li><strong>イ</strong>: ${userI || '未選択'}</li>`;
+        userAnsHTML += `<li><strong>ウ</strong>: ${userU || '未選択'}</li>`;
+        userAnsHTML += `<li><strong>エ</strong>: ${userE || '未選択'}</li>`;
+
+        correctAnsHTML += `<li><strong>ア</strong>: ${q.answers["ア"]}</li>`;
+        correctAnsHTML += `<li><strong>イ</strong>: ${q.answers["イ"]}</li>`;
+        correctAnsHTML += `<li><strong>ウ</strong>: 屋内 または 屋外</li>`;
+        correctAnsHTML += `<li><strong>エ</strong>: 屋外 または 内</li>`;
+
+        const isAiCorrect = (userA === q.answers["ア"] && userI === q.answers["イ"]);
+        const isUeCorrect = (
+            (userU === "屋内排水設備" && userE === "屋外排水設備") ||
+            (userU === "屋外排水設備" && userE === "屋内排水設備")
+        );
+
+        if (!(isAiCorrect && isUeCorrect)) {
+            allCorrect = false;
+        }
+    } else {
+        // 通常の問題
+        Object.keys(q.answers).forEach(key => {
+            const userVal = document.getElementById(`select-${key}`).value;
+            const correctVal = q.answers[key];
+            userAnsHTML += `<li><strong>${key}</strong>: ${userVal || '未選択'}</li>`;
+            correctAnsHTML += `<li><strong>${key}</strong>: ${correctVal}</li>`;
+            if (userVal !== correctVal) allCorrect = false;
+        });
+    }
 
     const box = document.getElementById('feedback-box');
     let reviewList = getReviewList();
